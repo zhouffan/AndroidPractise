@@ -44,62 +44,65 @@ public class Flowlayout extends ViewGroup {
         linesView.clear();
         lineHeight.clear();
         //根据 mode 测量当前控件的自身高度
-        int measuredWidth = 0;
-        int measuredHeight = 0;
+        int parentWidth = 0;
+        int parentHeight = 0;
         //获取宽高 mode和size
         int widthMode = MeasureSpec.getMode(widthMeasureSpec);
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+        boolean isFixedValue = false;
         //宽高都是 精确值时，直接使用size      match也是固定值
         if(widthMode == MeasureSpec.EXACTLY && heightMode == MeasureSpec.EXACTLY){
-            measuredWidth = widthSize;
-            measuredHeight = heightSize;
-        }else {
-            //当前行宽、高
-            int currentTotalLineWith = 0;
-            int currentTotalLineHeight = 0;
-            List<View> singleLineView = new ArrayList<>();
-            //根据子view的宽度计算 整个viewGroup的高度===================> measuredWidth和measuredHeight
-            for (int i = 0; i < getChildCount(); i++) {
-                View child = getChildAt(i);
-                //先让子view测量自身
-                measureChild(child, widthMeasureSpec, heightMeasureSpec);//2/3参数是父view的
-                //获取子view 的 margin信息
-                MarginLayoutParams layoutParams = (MarginLayoutParams) child.getLayoutParams();
-                //获取子view的实际宽高
-                int childMeasuredWidth = child.getMeasuredWidth() + layoutParams.leftMargin + layoutParams.rightMargin;
-                int childMeasuredHeight = child.getMeasuredHeight() + layoutParams.bottomMargin + layoutParams.topMargin;
-                //换行
-                if(currentTotalLineWith + childMeasuredWidth > widthSize){
+            parentWidth = widthSize;
+            parentHeight = heightSize;
+            isFixedValue = true;
+        }
+        //测量子view
+        //当前行宽、高
+        int currentTotalLineWith = 0;
+        int currentTotalLineHeight = 0;
+        List<View> singleLineView = new ArrayList<>();
+        //根据子view的宽度计算 整个viewGroup的高度===================> measuredWidth和measuredHeight
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            //先让子view测量自身
+            measureChild(child, widthMeasureSpec, heightMeasureSpec);//2/3参数是父view的
+            //获取子view 的 margin信息
+            MarginLayoutParams layoutParams = (MarginLayoutParams) child.getLayoutParams();
+            //获取子view的实际宽高
+            int childMeasuredWidth = child.getMeasuredWidth() + layoutParams.leftMargin + layoutParams.rightMargin;
+            int childMeasuredHeight = child.getMeasuredHeight() + layoutParams.bottomMargin + layoutParams.topMargin;
+            //换行
+            if(currentTotalLineWith + childMeasuredWidth > widthSize){
+                //父view固定值时， 不需要再进行改变值
+                if(!isFixedValue){
                     //获取当前行的 最大宽
-                    measuredWidth = Math.max(measuredWidth, currentTotalLineWith);
+                    parentWidth = Math.max(parentWidth, currentTotalLineWith);
                     //累加 行高到 父view中
-                    measuredHeight += currentTotalLineHeight;
-
-                    //当前行高
-                    lineHeight.add(currentTotalLineHeight);
-                    linesView.add(singleLineView);
-                    singleLineView = new ArrayList<>();
-
-                    //换行后，初始化当前行数据，设置成当前第一个
-                    currentTotalLineWith = childMeasuredWidth;
-                    currentTotalLineHeight = childMeasuredHeight;
-                    //添加单行的view
-                    singleLineView.add(child);
-                }else {
-                    //不换行， 累加
-                    currentTotalLineWith += childMeasuredWidth;
-                    currentTotalLineHeight = Math.max(currentTotalLineHeight, childMeasuredHeight);//取每行最高的一个
-                    //添加单行的view
-                    singleLineView.add(child);
+                    parentHeight += currentTotalLineHeight;
                 }
+
+                //当前行高
+                lineHeight.add(currentTotalLineHeight);
+                linesView.add(singleLineView);
+                singleLineView = new ArrayList<>();
+
+                //换行后，初始化当前行数据，设置成当前第一个
+                currentTotalLineWith = childMeasuredWidth;
+                currentTotalLineHeight = childMeasuredHeight;
+            }else {
+                //不换行， 累加
+                currentTotalLineWith += childMeasuredWidth;
+                currentTotalLineHeight = Math.max(currentTotalLineHeight, childMeasuredHeight);//取每行最高的一个
             }
+            //添加单行的view
+            singleLineView.add(child);
         }
 
-
-        setMeasuredDimension(measuredWidth, measuredHeight);
+        setMeasuredDimension(parentWidth, parentHeight);
     }
+
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
